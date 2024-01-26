@@ -2,24 +2,14 @@
 import io
 import re
 import sys
-import time
+import platform
 import subprocess
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf-8')
 
 import undetected_chromedriver as uc
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-
-def get_driver_version():
-   cmd = r'''powershell -command "&{(Get-Item 'C:\Program Files\Google\Chrome\Application\chrome.exe').VersionInfo.ProductVersion}"'''
-   try:
-       out, err = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-       out = out.decode('utf-8').split(".")[0]
-       return out
-   except IndexError as e:
-       print('Check chrome version failed:{}'.format(e))
-       return 0
-
+import requests
 
 def zodgame_checkin(driver, formhash):
     checkin_url = "https://zodgame.xyz/plugin.php?id=dsu_paulsign:sign&operation=qiandao&infloat=1&inajax=0"    
@@ -86,7 +76,6 @@ def zodgame_task(driver, formhash):
     if len(join_task_a) == 0:
         print("【任务】所有任务均已完成。")
         return success
-   
     handle = driver.current_window_handle
     for idx, a in enumerate(join_task_a):
         on_click = a.get_attribute("onclick")
@@ -94,7 +83,7 @@ def zodgame_task(driver, formhash):
             function = re.search("""openNewWindow(.*?)\(\)""", on_click, re.S)[0]
             script = driver.find_element(By.XPATH, f'//script[contains(text(), "{function}")]').get_attribute("text")
             task_url = re.search("""window.open\("(.*)", "newwindow"\)""", script, re.S)[1]
-            driver.tab_new(f"https://zodgame.xyz/{task_url}")
+            driver.execute_script(f"""window.open("https://zodgame.xyz/{task_url}")""")
             driver.switch_to.window(driver.window_handles[-1])
             try:
                 WebDriverWait(driver, 240).until(
@@ -129,9 +118,10 @@ def zodgame_task(driver, formhash):
 def zodgame(cookie_string):
     options = uc.ChromeOptions()
     options.add_argument("--disable-popup-blocking")
-      
-    version = get_driver_version()
-    driver = uc.Chrome(version_main=version, options = options)
+    options.add_argument("--headless")
+    driver = uc.Chrome(driver_executable_path = """C:\SeleniumWebDrivers\ChromeDriver\chromedriver.exe""",
+                       browser_executable_path = """C:\Program Files\Google\Chrome\Application\chrome.exe""",
+                       options = options)
 
     # Load cookie
     driver.get("https://zodgame.xyz/")
